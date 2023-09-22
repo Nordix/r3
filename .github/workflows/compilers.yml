@@ -1,0 +1,52 @@
+name: compilers
+on: [push, pull_request]
+
+jobs:
+  clang:
+    name: Clang ${{ matrix.clang-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        clang-version: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    steps:
+    - uses: actions/checkout@v3
+    - uses: aminya/setup-cpp@v1
+      with:
+        llvm: ${{ matrix.clang-version }}
+    - name: autotools
+      continue-on-error: true
+      run: |
+        ./autogen.sh
+        ./configure
+        make V=1
+    - name: CMake
+      run: |
+        mkdir build && cd build
+        cmake ..
+        VERBOSE=1 make
+
+  gcc:
+    name: GCC ${{ matrix.gcc-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        gcc-version: [9, 10, 11, 12, 13]
+        # gcc-version: [7, 8] NOT WORKING
+    steps:
+    - uses: actions/checkout@v3
+    - uses: aminya/setup-cpp@v1
+      with:
+        gcc: ${{ matrix.gcc-version }}
+    - name: autotools
+      continue-on-error: true
+      run: |
+        ./autogen.sh
+        ./configure
+        make V=1
+    - name: CMake
+      run: |
+        mkdir build && cd build
+        cmake ..
+        VERBOSE=1 make

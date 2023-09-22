@@ -2,7 +2,12 @@ cmake_minimum_required(VERSION 3.0)
 project(r3 VERSION 2.0.0)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
-set(CMAKE_C_STANDARD 99)
+# set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD 23)
+
+# set(CMAKE_C_STANDARD_REQUIRED ON)
+# set(CMAKE_C_EXTENSIONS OFF)
+#add_compile_options(-std=c2x)
 
 find_package(Check)
 find_package(PCRE REQUIRED)
