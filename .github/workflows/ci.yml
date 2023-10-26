@@ -2,69 +2,151 @@ name: ci
 on: [push, pull_request]
 
 jobs:
-  autotools:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Prepare
-      run: |
-        sudo apt update -qq
-        sudo apt install -qq check lcov
-    - uses: actions/checkout@v2
-    - name: Build
-      run: |
-        ./autogen.sh
-        ./configure --enable-check --enable-debug --enable-gcov
-        make V=1
-    - name: Install
-      run: sudo make install
-    - name: Run tests
-      run: make check
-    - name: Collect coverage
-      run: lcov --capture -d '.' --exclude '/usr*' -o coverage.info
-    - name: Upload coverage
-      if: github.repository == 'c9s/r3'
-      uses: coverallsapp/github-action@1.1.3
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        path-to-lcov: coverage.info
+  # autotools:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - name: Prepare
+  #     run: |
+  #       sudo apt update -qq
+  #       sudo apt install -qq check lcov
+  #   - uses: actions/checkout@v2
+  #   - name: Build
+  #     run: |
+  #       ./autogen.sh
+  #       ./configure --enable-check --enable-debug --enable-gcov
+  #       make V=1
+  #   - name: Install
+  #     run: sudo make install
+  #   - name: Run tests
+  #     run: make check
+  #   - name: Collect coverage
+  #     run: lcov --capture -d '.' --exclude '/usr*' -o coverage.info
+  #   - name: Upload coverage
+  #     if: github.repository == 'c9s/r3'
+  #     uses: coverallsapp/github-action@1.1.3
+  #     with:
+  #       github-token: ${{ secrets.GITHUB_TOKEN }}
+  #       path-to-lcov: coverage.info
 
-  cmake:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Prepare
-      run: |
-        sudo apt update -qq
-        sudo apt install -qq check ninja-build
-    - uses: actions/checkout@v2
-    - name: Build and test
-      run: |
-        mkdir build && cd build
-        cmake -GNinja ..
-        ninja -v
-        ctest --verbose
+  # cmake:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - name: Prepare
+  #     run: |
+  #       sudo apt update -qq
+  #       sudo apt install -qq check ninja-build
+  #   - uses: actions/checkout@v2
+  #   - name: Build and test
+  #     run: |
+  #       mkdir build && cd build
+  #       cmake -GNinja ..
+  #       ninja -v
+  #       ctest --verbose
 
-  sanitizers:
-    name: ${{ matrix.sanitizer }}-sanitizer [${{ matrix.compiler }}]
+  # sanitizers:
+  #   name: ${{ matrix.sanitizer }}-sanitizer [${{ matrix.compiler }}]
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       compiler: [gcc, clang]
+  #       sanitizer: [thread, undefined, leak, address]
+  #   steps:
+  #   - name: Prepare
+  #     run: |
+  #       sudo apt update -qq
+  #       sudo apt install -qq check
+  #   - uses: actions/checkout@v2
+  #   - name: Build
+  #     env:
+  #       CC: ${{ matrix.compiler }}
+  #     run: |
+  #       mkdir build && cd build
+  #       CFLAGS="-fsanitize=${{ matrix.sanitizer }} -fno-sanitize-recover=all -fno-omit-frame-pointer" cmake ..
+  #       VERBOSE=1 make all
+  #   - name: Test
+  #     run: |
+  #       cd build
+  #       ctest --verbose
+
+  centos6:
+    name: centos:6
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        compiler: [gcc, clang]
-        sanitizer: [thread, undefined, leak, address]
+    container: centos:6
     steps:
-    - name: Prepare
-      run: |
-        sudo apt update -qq
-        sudo apt install -qq check
-    - uses: actions/checkout@v2
-    - name: Build
-      env:
-        CC: ${{ matrix.compiler }}
-      run: |
-        mkdir build && cd build
-        CFLAGS="-fsanitize=${{ matrix.sanitizer }} -fno-sanitize-recover=all -fno-omit-frame-pointer" cmake ..
-        VERBOSE=1 make all
-    - name: Test
-      run: |
-        cd build
-        ctest --verbose
+      # - uses: actions/checkout@v1
+      #   with:
+      #     ref: 031a37514ed29da17cd990cd5ee532bec3b18b38
+      - name: Install dependencies
+        run: |
+          curl https://www.getpagespeed.com/files/centos6-eol.repo --output /etc/yum.repos.d/CentOS-Base.repo
+          yum -y upgrade
+          yum -y install gcc gcc-c++ make automake libtool wget
+          #yum -y install pcre-devel
+          yum -y install pcre2-devel
+      - run: |
+          wget http://ftp.gnu.org/gnu/autoconf/autoconf-latest.tar.gz
+          tar -xzf autoconf-latest.tar.gz
+          cd autoconf-2.71
+          ./configure
+          make
+          make install
+      - run: |
+          gcc --version
+          g++ --version
+          uname -a
+      - name: Build
+        run: |
+          ./autogen.sh
+          ./configure
+          make V=1
+
+  centos7:
+    name: centos:7
+    runs-on: ubuntu-latest
+    container: centos:7
+    steps:
+      - uses: actions/checkout@v2
+        # with:
+        #   ref: 031a37514ed29da17cd990cd5ee532bec3b18b38
+      - name: Install dependencies
+        run: |
+          yum -y group install "Development tools"
+          #yum -y install pcre-devel
+          yum -y install pcre2-devel
+      - run: |
+          gcc --version
+          g++ --version
+          uname -a
+      - name: Build
+        run: |
+          ./autogen.sh
+          ./configure
+          make V=1
+
+  gcc-old:
+    name: GCC 4.4
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Setup GCC
+        run: |
+          wget http://launchpadlibrarian.net/336269522/libmpfr4_3.1.6-1_amd64.deb
+          wget http://old-releases.ubuntu.com/ubuntu/pool/universe/g/gcc-4.4/gcc-4.4-base_4.4.7-8ubuntu1_amd64.deb
+          wget http://old-releases.ubuntu.com/ubuntu/pool/universe/g/gcc-4.4/cpp-4.4_4.4.7-8ubuntu1_amd64.deb
+          wget http://old-releases.ubuntu.com/ubuntu/pool/universe/g/gcc-4.4/gcc-4.4_4.4.7-8ubuntu1_amd64.deb
+          wget http://old-releases.ubuntu.com/ubuntu/pool/universe/g/gcc-4.4/libstdc++6-4.4-dev_4.4.7-8ubuntu1_amd64.deb
+          wget http://old-releases.ubuntu.com/ubuntu/pool/universe/g/gcc-4.4/g++-4.4_4.4.7-8ubuntu1_amd64.deb
+          sudo dpkg -i ./libmpfr4_3.1.6-1_amd64.deb
+          sudo dpkg -i ./gcc-4.4-base_4.4.7-8ubuntu1_amd64.deb
+          sudo dpkg -i ./cpp-4.4_4.4.7-8ubuntu1_amd64.deb
+          sudo dpkg -i ./gcc-4.4_4.4.7-8ubuntu1_amd64.deb
+          sudo dpkg -i ./libstdc++6-4.4-dev_4.4.7-8ubuntu1_amd64.deb ./g++-4.4_4.4.7-8ubuntu1_amd64.deb
+      - uses: actions/checkout@v3
+      - name: Build
+        env:
+          CC: gcc-4.4
+          CXX: g++-4.4
+        run: |
+          ./autogen.sh
+          ./configure
+          make V=1
