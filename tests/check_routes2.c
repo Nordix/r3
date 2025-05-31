@@ -80,6 +80,50 @@ START_TEST (common_pattern)
 }
 END_TEST
 
+START_TEST (common_pattern_2)
+{
+    R3Node *n = r3_tree_create(10);
+    match_entry *entry;
+    R3Route *r, *matched_route;
+
+    /* Setup routes. */
+    char *uri0 = "/tunnels/tunnel";
+    r = r3_tree_insert_route(n, 0, uri0, &uri0);
+    ck_assert(r != NULL);
+    char *uri1 = "/tunnels/tunnel/lac-tid={lac-tid}";
+    r = r3_tree_insert_route(n, 0, uri1, &uri1);
+    ck_assert(r != NULL);
+    char *uri2 = "/tunnels/tunnel/lac-tid={lac-tid}/lac-tid";
+    r = r3_tree_insert_route(n, 0, uri2, &uri2);
+    ck_assert(r != NULL);
+
+    /* Compile */
+    char *err = NULL;
+    r3_tree_compile(n, &err);
+    ck_assert(err == NULL);
+
+    /* Match route and check entry. */
+    entry = match_entry_create("/tunnels/tunnel/lac-tid=2");
+    matched_route = r3_tree_match_route(n, entry);
+    ck_assert(matched_route != NULL);
+    ck_assert(matched_route->data == &uri1);
+    ck_assert(entry->vars.tokens.size == 1);
+    ck_assert(strncmp(entry->vars.tokens.entries[0].base, "2", entry->vars.tokens.entries[0].len) == 0 );
+    match_entry_free(entry);
+
+    /* Match route and check entry. */
+    entry = match_entry_create("/tunnels/tunnel/lac-tid=4/lac-tid");
+    matched_route = r3_tree_match_route(n, entry);
+    ck_assert(matched_route != NULL);
+    ck_assert(matched_route->data == &uri2);
+    ck_assert(entry->vars.tokens.size == 1);
+    ck_assert(strncmp(entry->vars.tokens.entries[0].base, "4", entry->vars.tokens.entries[0].len) == 0 );
+    match_entry_free(entry);
+
+    r3_tree_free(n);
+}
+END_TEST
+
 START_TEST (incomplete_pattern)
 {
     R3Node * n = r3_tree_create(10);
@@ -101,6 +145,7 @@ Suite* r3_suite (void) {
     TCase *tcase = tcase_create("testcase");
     tcase_add_test(tcase, greedy_pattern);
     tcase_add_test(tcase, common_pattern);
+    tcase_add_test(tcase, common_pattern_2);
     tcase_add_test(tcase, incomplete_pattern);
     suite_add_tcase(suite, tcase);
     return suite;
