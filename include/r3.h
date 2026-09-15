@@ -169,11 +169,6 @@ void r3_edge_free(R3Edge * edge);
 
 
 
-R3Route * r3_route_create(const char * path);
-
-// R3Route * r3_route_createl(const char * path, int path_len);
-
-
 R3Route * r3_node_append_route(R3Node *tree, const char * path, int path_len, int method, void *data);
 
 void r3_route_free(R3Route * route);
@@ -182,7 +177,6 @@ int r3_route_cmp(const R3Route *r1, const match_entry *r2);
 
 R3Route * r3_tree_match_route(const R3Node *n, match_entry * entry);
 
-#define r3_route_create(p) r3_route_createl(p, strlen(p))
 
 
 #define METHOD_GET 2
